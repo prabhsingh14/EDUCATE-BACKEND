@@ -1,12 +1,13 @@
 import { instance } from "../config/razorpay";
 import Course from "../models/Course";
 import crypto from "crypto";
-import User from "../models/User";
+import { updateMonthlyAnalytics } from "../utils/analytics";
 import mailSender from "../utils/mailSender";
 import mongoose from "mongoose";
 import { courseEnrollmentEmail } from "../mail/templates/courseEnrollmentEmail";
 import { paymentSuccessEmail } from "../mail/templates/paymentSuccessEmail";
 import CourseProgress from "../models/CourseProgress";
+import User from "../models/User";
 
 // Capture the payment and initiate the Razorpay order
 exports.capturePayment = async (req, res) => {
@@ -96,7 +97,7 @@ exports.verifyPayment = async (req, res) => {
     .digest("hex")
 
   if (expectedSignature === razorpay_signature) {
-    await enrollStudents(courses, userId, res)
+    await enrollStudents(courses, userId, res, razorpay_payment_id, razorpay_order_id)
     return res.status(200).json({ success: true, message: "Payment Verified" })
   }
 
@@ -136,8 +137,8 @@ exports.sendPaymentSuccessEmail = async (req, res) => {
   }
 }
 
-// enroll the student in the courses
-const enrollStudents = async (courses, userId, res) => {
+// enroll the student in the course, send him mail & update monthly analytics for the instructor
+const enrollStudents = async (courses, userId, res, razorpayPaymentId, razorpayOrderId) => {
   if (!courses || !userId) {
     return res
       .status(400)
@@ -154,17 +155,18 @@ const enrollStudents = async (courses, userId, res) => {
       )
 
       if (!enrolledCourse) {
-        return res
-          .status(500)
-          .json({ success: false, error: "Course not found" })
+        return res.status(500).json({ 
+          success: false, 
+          error: "Course not found" 
+        })
       }
-      console.log("Updated course: ", enrolledCourse)
 
       const courseProgress = await CourseProgress.create({
         courseID: courseId,
         userId: userId,
         completedVideos: [],
       })
+
       // Find the student and add the course to their list of enrolled courses
       const enrolledStudent = await User.findByIdAndUpdate(
         userId,
@@ -177,7 +179,28 @@ const enrollStudents = async (courses, userId, res) => {
         { new: true }
       )
 
-      console.log("Enrolled student: ", enrolledStudent)
+      // create payment document
+      const instructorId = enrolledCourse.instructor
+      const amountInPaise = enrolledCourse.price * 100
+      
+      await Payment.create({
+        userId: userId,
+        courseId: courseId,
+        instructor: instructorId,
+        amount: amountInPaise,
+        razorpayPaymentId,
+        razorpayOrderId,
+        status: "completed",
+        paymentDate: new Date(),
+      })
+
+      // update monthly analytics for the instructor
+      await updateMonthlyAnalytics(
+        instructorId,
+        amountInPaise,
+        new Date()
+      );
+
       // Send an email notification to the enrolled student
       const emailResponse = await mailSender(
         enrolledStudent.email,
