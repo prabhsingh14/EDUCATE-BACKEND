@@ -49,6 +49,7 @@ A production-ready backend system powering a modern EdTech platform. Built with 
 
 ### 📊 Instructor Dashboard
 - Retrieve key metrics for courses and user engagement
+- Monthly Analytics
 
 ---
 
