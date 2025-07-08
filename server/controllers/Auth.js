@@ -1,43 +1,25 @@
-const bcrypt = require("bcrypt")
-const User = require("../models/User")
-const OTP = require("../models/OTP")
-const jwt = require("jsonwebtoken")
-const otpGenerator = require("otp-generator")
-const mailSender = require("../utils/mailSender")
-const { passwordUpdated } = require("../mail/templates/passwordUpdate")
-const Profile = require("../models/Profile")
+import bcrypt from "bcrypt";
+import User from "../models/User.js";
+import OTP from "../models/OTP.js";
+import jwt from "jsonwebtoken";
+import otpGenerator from "otp-generator";
+import mailSender from "../utils/mailSender.js";
+import { passwordUpdated } from "../mail/templates/passwordUpdate.js";
+import Profile from "../models/Profile.js";
 require("dotenv").config()
-
-// Signup Controller for Registering USers
 
 exports.signup = async (req, res) => {
   try {
-    // Destructure fields from the request body
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      confirmPassword,
-      accountType,
-      contactNumber,
-      otp,
-    } = req.body
-    // Check if All Details are there or not
-    if (
-      !firstName ||
-      !lastName ||
-      !email ||
-      !password ||
-      !confirmPassword ||
-      !otp
-    ) {
+    const { firstName, lastName, email, password, confirmPassword, accountType, contactNumber, otp } = req.body
+
+    if (!firstName || !lastName || !email || !password || !confirmPassword || !otp) {
       return res.status(403).send({
         success: false,
         message: "All Fields are required",
       })
     }
-    // Check if password and confirm password match
+    
+    // check if password and confirmPassword match
     if (password !== confirmPassword) {
       return res.status(400).json({
         success: false,
@@ -112,15 +94,11 @@ exports.signup = async (req, res) => {
   }
 }
 
-// Login controller for authenticating users
 exports.login = async (req, res) => {
   try {
-    // Get email and password from request body
     const { email, password } = req.body
 
-    // Check if email or password is missing
     if (!email || !password) {
-      // Return 400 Bad Request status code with error message
       return res.status(400).json({
         success: false,
         message: `Please Fill up All the Required Fields`,
@@ -130,9 +108,7 @@ exports.login = async (req, res) => {
     // Find user with provided email
     const user = await User.findOne({ email }).populate("additionalDetails")
 
-    // If user not found with provided email
     if (!user) {
-      // Return 401 Unauthorized status code with error message
       return res.status(401).json({
         success: false,
         message: `User is not Registered with Us Please SignUp to Continue`,
@@ -171,26 +147,23 @@ exports.login = async (req, res) => {
     }
   } catch (error) {
     console.error(error)
-    // Return 500 Internal Server Error status code with error message
     return res.status(500).json({
       success: false,
       message: `Login Failure Please Try Again`,
     })
   }
 }
+
 // Send OTP For Email Verification
 exports.sendotp = async (req, res) => {
   try {
     const { email } = req.body
 
     // Check if user is already present
-    // Find user with provided email
     const checkUserPresent = await User.findOne({ email })
-    // to be used in case of signup
 
     // If user found with provided email
     if (checkUserPresent) {
-      // Return 401 Unauthorized status code with error message
       return res.status(401).json({
         success: false,
         message: `User is Already Registered`,
@@ -202,18 +175,18 @@ exports.sendotp = async (req, res) => {
       lowerCaseAlphabets: false,
       specialChars: false,
     })
+
     const result = await OTP.findOne({ otp: otp })
-    console.log("Result is Generate OTP Func")
-    console.log("OTP", otp)
-    console.log("Result", result)
+    
     while (result) {
       otp = otpGenerator.generate(6, {
         upperCaseAlphabets: false,
       })
     }
+
     const otpPayload = { email, otp }
     const otpBody = await OTP.create(otpPayload)
-    console.log("OTP Body", otpBody)
+
     res.status(200).json({
       success: true,
       message: `OTP Sent Successfully`,
@@ -221,29 +194,29 @@ exports.sendotp = async (req, res) => {
     })
   } catch (error) {
     console.log(error.message)
-    return res.status(500).json({ success: false, error: error.message })
+
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    })
   }
 }
 
-// Controller for Changing Password
 exports.changePassword = async (req, res) => {
   try {
-    // Get user data from req.user
     const userDetails = await User.findById(req.user.id)
-
-    // Get old password, new password, and confirm new password from req.body
     const { oldPassword, newPassword } = req.body
 
-    // Validate old password
     const isPasswordMatch = await bcrypt.compare(
       oldPassword,
       userDetails.password
     )
+
     if (!isPasswordMatch) {
-      // If old password does not match, return a 401 (Unauthorized) error
-      return res
-        .status(401)
-        .json({ success: false, message: "The password is incorrect" })
+      return res.status(401).json({ 
+        success: false, 
+        message: "The password is incorrect" 
+      })
     }
 
     // Update password
@@ -266,7 +239,6 @@ exports.changePassword = async (req, res) => {
       )
       console.log("Email sent successfully:", emailResponse.response)
     } catch (error) {
-      // If there's an error sending the email, log the error and return a 500 (Internal Server Error) error
       console.error("Error occurred while sending email:", error)
       return res.status(500).json({
         success: false,
@@ -275,12 +247,10 @@ exports.changePassword = async (req, res) => {
       })
     }
 
-    // Return success response
     return res
       .status(200)
       .json({ success: true, message: "Password updated successfully" })
   } catch (error) {
-    // If there's an error updating the password, log the error and return a 500 (Internal Server Error) error
     console.error("Error occurred while updating password:", error)
     return res.status(500).json({
       success: false,

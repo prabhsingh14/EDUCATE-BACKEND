@@ -1,13 +1,11 @@
-const Section = require("../models/Section")
-const Course = require("../models/Course")
-const SubSection = require("../models/Subsection")
-// CREATE a new section
+import Section from "../models/Section";
+import Course from "../models/Course";
+import SubSection from "../models/Subsection";
+
 exports.createSection = async (req, res) => {
   try {
-    // Extract the required properties from the request body
     const { sectionName, courseId } = req.body
 
-    // Validate the input
     if (!sectionName || !courseId) {
       return res.status(400).json({
         success: false,
@@ -36,14 +34,12 @@ exports.createSection = async (req, res) => {
       })
       .exec()
 
-    // Return the updated course object in the response
     res.status(200).json({
       success: true,
       message: "Section created successfully",
       updatedCourse,
     })
   } catch (error) {
-    // Handle errors
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -52,7 +48,6 @@ exports.createSection = async (req, res) => {
   }
 }
 
-// UPDATE a section
 exports.updateSection = async (req, res) => {
   try {
     const { sectionName, sectionId, courseId } = req.body
@@ -69,7 +64,7 @@ exports.updateSection = async (req, res) => {
         },
       })
       .exec()
-    console.log(course)
+
     res.status(200).json({
       success: true,
       message: section,
@@ -85,23 +80,24 @@ exports.updateSection = async (req, res) => {
   }
 }
 
-// DELETE a section
 exports.deleteSection = async (req, res) => {
   try {
     const { sectionId, courseId } = req.body
+
     await Course.findByIdAndUpdate(courseId, {
       $pull: {
         courseContent: sectionId,
       },
     })
+    
     const section = await Section.findById(sectionId)
-    console.log(sectionId, courseId)
     if (!section) {
       return res.status(404).json({
         success: false,
         message: "Section not found",
       })
     }
+    
     // Delete the associated subsections
     await SubSection.deleteMany({ _id: { $in: section.subSection } })
 

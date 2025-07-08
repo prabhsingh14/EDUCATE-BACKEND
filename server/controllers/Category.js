@@ -1,21 +1,25 @@
-const Category = require("../models/Category")
+import Category from "../models/Category";
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max)
 }
+
 exports.createCategory = async (req, res) => {
   try {
     const { name, description } = req.body
+    
     if (!name) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required" })
+      return res.status(400).json({ 
+        success: false, 
+        message: "Category name is required" 
+      })
     }
+
     const CategorysDetails = await Category.create({
       name: name,
       description: description,
     })
-    console.log(CategorysDetails)
+
     return res.status(200).json({
       success: true,
       message: "Categorys Created Successfully",
@@ -64,6 +68,7 @@ exports.categoryPageDetails = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Category not found" })
     }
+
     // Handle the case when there are no courses
     if (selectedCategory.courses.length === 0) {
       console.log("No courses found for the selected category.")
@@ -77,6 +82,7 @@ exports.categoryPageDetails = async (req, res) => {
     const categoriesExceptSelected = await Category.find({
       _id: { $ne: categoryId },
     })
+
     let differentCategory = await Category.findOne(
       categoriesExceptSelected[getRandomInt(categoriesExceptSelected.length)]
         ._id
@@ -86,7 +92,7 @@ exports.categoryPageDetails = async (req, res) => {
         match: { status: "Published" },
       })
       .exec()
-    console.log()
+
     // Get top-selling courses across all categories
     const allCategories = await Category.find()
       .populate({
@@ -94,6 +100,7 @@ exports.categoryPageDetails = async (req, res) => {
         match: { status: "Published" },
       })
       .exec()
+      
     const allCourses = allCategories.flatMap((category) => category.courses)
     const mostSellingCourses = allCourses
       .sort((a, b) => b.sold - a.sold)

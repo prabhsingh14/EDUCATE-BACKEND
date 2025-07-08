@@ -1,28 +1,21 @@
-// Importing necessary modules and packages
-const express = require("express");
-const app = express();
-const userRoutes = require("./routes/user");
-const profileRoutes = require("./routes/profile");
-const courseRoutes = require("./routes/Course");
-const paymentRoutes = require("./routes/Payments");
-const contactUsRoute = require("./routes/Contact");
-const database = require("./config/database");
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
-const { cloudinaryConnect } = require("./config/cloudinary");
-const fileUpload = require("express-fileupload");
-const dotenv = require("dotenv");
+import express from "express";
+import userRoutes from "./routes/User";
+import profileRoutes from "./routes/Profile";
+import courseRoutes from "./routes/Course";
+import paymentRoutes from "./routes/Payments";
+import contactUsRoute from "./routes/Contact";
+import database from "./config/database";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import { cloudinaryConnect } from "./config/cloudinary";
+import fileUpload from "express-fileupload";
+import dotenv from "dotenv";
 
-// Setting up port number
 const PORT = process.env.PORT || 4000;
-
-// Loading environment variables from .env file
 dotenv.config();
-
-// Connecting to database
 database.connect();
- 
-// Middlewares
+
+const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(
@@ -38,7 +31,6 @@ app.use(
 	})
 );
 
-// Connecting to cloudinary
 cloudinaryConnect();
 
 // Setting up routes
@@ -60,5 +52,3 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
 	console.log(`App is listening at ${PORT}`);
 });
-
-// End of code.

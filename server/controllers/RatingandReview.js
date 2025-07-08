@@ -1,15 +1,13 @@
-const RatingAndReview = require("../models/RatingandReview")
-const Course = require("../models/Course")
-const mongoose = require("mongoose")
+import RatingAndReview from "../models/RatingandReview";
+import Course from "../models/Course";
+import mongoose from "mongoose";
 
-// Create a new rating and review
 exports.createRating = async (req, res) => {
   try {
     const userId = req.user.id
     const { rating, review, courseId } = req.body
 
     // Check if the user is enrolled in the course
-
     const courseDetails = await Course.findOne({
       _id: courseId,
       studentsEnroled: { $elemMatch: { $eq: userId } },
@@ -58,6 +56,7 @@ exports.createRating = async (req, res) => {
     })
   } catch (error) {
     console.error(error)
+    
     return res.status(500).json({
       success: false,
       message: "Internal server error",

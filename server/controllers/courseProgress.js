@@ -1,8 +1,8 @@
-const mongoose = require("mongoose")
-const Section = require("../models/Section")
-const SubSection = require("../models/Subsection")
-const CourseProgress = require("../models/CourseProgress")
-const Course = require("../models/Course")
+import mongoose from "mongoose";
+import Section from "../models/Section.js";
+import SubSection from "../models/Subsection.js";
+import CourseProgress from "../models/CourseProgress.js";
+import Course from "../models/Course.js";
 
 exports.updateCourseProgress = async (req, res) => {
   const { courseId, subsectionId } = req.body
@@ -47,53 +47,68 @@ exports.updateCourseProgress = async (req, res) => {
   }
 }
 
-// exports.getProgressPercentage = async (req, res) => {
-//   const { courseId } = req.body
-//   const userId = req.user.id
+exports.getProgressPercentage = async (req, res) => {
+  const { courseId } = req.body
+  const userId = req.user.id
 
-//   if (!courseId) {
-//     return res.status(400).json({ error: "Course ID not provided." })
-//   }
+  if (!courseId) {
+    return res.status(400).json({ error: "Course ID not provided." })
+  }
 
-//   try {
-//     // Find the course progress document for the user and course
-//     let courseProgress = await CourseProgress.findOne({
-//       courseID: courseId,
-//       userId: userId,
-//     })
-//       .populate({
-//         path: "courseID",
-//         populate: {
-//           path: "courseContent",
-//         },
-//       })
-//       .exec()
+  try {
+    // Find the course progress document for the user and course
+    let courseProgress = await CourseProgress.findOne({
+      courseID: courseId,
+      userId: userId,
+    })
+      .populate({
+        path: "courseID",
+        populate: {
+          path: "courseContent",
+          populate: {
+            path: "subSection" // This was missing in your original code
+          }
+        },
+      })
+      .exec()
 
-//     if (!courseProgress) {
-//       return res
-//         .status(400)
-//         .json({ error: "Can not find Course Progress with these IDs." })
-//     }
-//     console.log(courseProgress, userId)
-//     let lectures = 0
-//     courseProgress.courseID.courseContent?.forEach((sec) => {
-//       lectures += sec.subSection.length || 0
-//     })
+    if (!courseProgress) {
+      return res
+        .status(404)
+        .json({ error: "Course progress not found for this user and course." })
+    }
 
-//     let progressPercentage =
-//       (courseProgress.completedVideos.length / lectures) * 100
+    // Calculate total lectures across all sections
+    let totalLectures = 0
+    courseProgress.courseID.courseContent?.forEach((section) => {
+      totalLectures += section.subSection?.length || 0
+    })
 
-//     // To make it up to 2 decimal point
-//     const multiplier = Math.pow(10, 2)
-//     progressPercentage =
-//       Math.round(progressPercentage * multiplier) / multiplier
+    // Handle edge case where course has no lectures
+    if (totalLectures === 0) {
+      return res.status(200).json({
+        data: 0,
+        message: "Course has no lectures",
+      })
+    }
 
-//     return res.status(200).json({
-//       data: progressPercentage,
-//       message: "Succesfully fetched Course progress",
-//     })
-//   } catch (error) {
-//     console.error(error)
-//     return res.status(500).json({ error: "Internal server error" })
-//   }
-// }
+    // Calculate progress percentage
+    let progressPercentage = (courseProgress.completedVideos.length / totalLectures) * 100
+
+    // Round to 2 decimal places
+    progressPercentage = Math.round(progressPercentage * 100) / 100
+
+    // Ensure percentage doesn't exceed 100%
+    progressPercentage = Math.min(progressPercentage, 100)
+
+    return res.status(200).json({
+      data: progressPercentage,
+      totalLectures,
+      completedLectures: courseProgress.completedVideos.length,
+      message: "Successfully fetched course progress",
+    })
+  } catch (error) {
+    console.error('Error calculating course progress:', error)
+    return res.status(500).json({ error: "Internal server error" })
+  }
+}
