@@ -4,6 +4,12 @@ A production-ready backend system powering a modern EdTech platform. Built with 
 
 ---
 
+## Architecture
+
+<img width="2086" alt="architecture" src="https://github.com/user-attachments/assets/9210715b-c6f3-4920-bd7a-98043064ffd9" />
+
+---
+
 ## Tech Stack
 
 - **Runtime**: Node.js  
